@@ -1,0 +1,95 @@
+﻿@using FoodOrderingApp.DTOs.Order
+@using FoodOrderingApp.DTOs.OrderAddon
+@using FoodOrderingApp.Models
+@using Microsoft.AspNetCore.Components.Forms
+
+<div style="float: left; width: 50%;">
+    @if (Order.Dish != null || Order.OrderAddons.Any())
+    {
+        <h4>@(!string.IsNullOrEmpty(Order.UserName) ? Order.UserName : "Użytkowniku"), oto twoje zamówienie:</h4>
+    }
+
+    <div class="order-container">
+        <div class="order-summary">
+            @if (Order.Dish != null)
+            {
+                <p>
+                    <strong>Danie:</strong> @Order.DishName - @Order.Dish.Price zł
+                    <FluentButton @onclick="CancelDish">X</FluentButton>
+                </p>
+            }
+            @if (Order.OrderAddons != null && Order.OrderAddons.Any())
+            {
+                <p><strong>Dodatki:</strong></p>
+                <ul>
+                    @foreach (var orderAddon in Order.OrderAddons)
+                    {
+                        <li>
+                            @orderAddon.Addon.Name - @orderAddon.Addon.Price zł (@orderAddon.Quantity)
+                            <FluentButton @onclick="() => CancelAddon(orderAddon)">X</FluentButton>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    </div>
+</div>
+
+<div style="float: right; width: 50%;">
+    <EditForm EditContext="editContext">
+        <DataAnnotationsValidator />
+        <div class="order-inputs">
+            <label for="PhoneNumber">Podaj numer telefonu:</label>
+            <InputText id="PhoneNumber" @bind-Value="User.PhoneNumber" class="form-control"></InputText>
+            <ValidationMessage For="@(() => User.PhoneNumber)" />
+
+            <label for="BankAccountNumber">Podaj numer konta bankowego:</label>
+            <InputText id="BankAccountNumber" @bind-Value="User.BankAccountNumber" class="form-control"></InputText>
+            <ValidationMessage For="@(() => User.BankAccountNumber)" />
+        </div>
+    </EditForm>
+    <div><strong>Łączna Cena:</strong> @Order.Price zł</div>
+</div>
+<br />
+
+@code {
+    [Parameter]
+    public OrderDto Order { get; set; }
+
+    [Parameter]
+    public AppUser User { get; set; }
+
+    [Parameter]
+    public EventCallback OnDishCancelled { get; set; }
+
+    public EditContext editContext;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        editContext = new EditContext(User);
+    }
+
+    private void CancelDish()
+    {
+        if (Order.Dish != null)
+        {
+            Order.Price -= Order.Dish.Price;
+            Order.Dish = null;
+            Order.DishName = null;
+
+            if (OnDishCancelled.HasDelegate)
+            {
+                OnDishCancelled.InvokeAsync(null);
+            }
+        }
+    }
+
+    private void CancelAddon(OrderAddonDto orderAddon)
+    {
+        Order.Price -= (orderAddon.Addon.Price * orderAddon.Quantity);
+        Order.OrderAddons.Remove(orderAddon);
+
+        StateHasChanged();
+    }
+}

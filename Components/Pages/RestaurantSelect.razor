@@ -1,0 +1,62 @@
+﻿@page "/restaurants"
+@using FoodOrderingApp.DTOs.Restaurant
+@using FoodOrderingApp.Services
+@using FoodOrderingApp.Models
+@inject NavigationManager _nav
+@inject RestaurantService _restaurantService
+
+<PageTitle> Restaurant Selector </PageTitle>
+<FluentHeader> Wybór restauracji </FluentHeader>
+<br />
+
+@if (isLoading)
+{
+    <p style="text-align: center;">Loading...</p>
+}
+else if (restaurants != null)
+{
+    <div class="d-flex flex-wrap justify-content-center">
+        @foreach (var restaurant in restaurants)
+        {
+            <div class="m-2" style="flex: 1 0 21%; max-width: 21%;">
+                <div class="card h-100">
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title">@restaurant.Name</h5>
+                        <p class="card-text flex-grow-1">@restaurant.Description</p>
+                        <div class="mt-auto">
+                            <FluentButton @onclick="() => FindMenuAndDishes(restaurant.Uuid)">Zamów</FluentButton>
+                            <FluentButton @onclick="() => NavigateToOrderList(restaurant.Uuid)">Lista zamówień</FluentButton>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+    <br />
+}
+
+
+
+@code {
+    private List<RestaurantDto> restaurants = new();
+    private RestaurantDto restaurant = new();
+    private bool isLoading = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        restaurants = await _restaurantService.GetAllRestaurants();
+        isLoading = false;
+    }
+
+    private async Task FindMenuAndDishes(string uuid)
+    {
+        restaurant = await _restaurantService.GetRestaurantByUuid(uuid);
+        _nav.NavigateTo($"/order/dish&addons/{uuid}");
+    }
+
+    private void NavigateToOrderList(string uuid)
+    {
+        _nav.NavigateTo($"/order_list/{uuid}");
+    }
+}

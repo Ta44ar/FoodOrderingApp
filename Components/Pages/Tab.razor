@@ -1,0 +1,20 @@
+﻿@page "/"
+@page "/tab"
+@inject NavigationManager _nav
+
+
+<div>
+    <FluentHeader>Food Order App</FluentHeader>
+    <div>
+        <FluentButton @onclick="NavigateToOrderComponent">Start</FluentButton>
+    </div>
+</div>
+
+
+
+@code {
+    private void NavigateToOrderComponent()
+    {
+        _nav.NavigateTo("/restaurants");
+    }
+}

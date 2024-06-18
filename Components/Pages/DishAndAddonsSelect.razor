@@ -1,0 +1,221 @@
+﻿@page "/order/dish&addons/{RestaurantUuid}"
+@using FoodOrderingApp.DTOs.Addon
+@using FoodOrderingApp.DTOs.Dish
+@using FoodOrderingApp.DTOs.Order
+@using FoodOrderingApp.DTOs.OrderAddon
+@using FoodOrderingApp.DTOs.Restaurant
+@using FoodOrderingApp.Data
+@using FoodOrderingApp.Models
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.Graph.Models
+@using System.ComponentModel.DataAnnotations
+@inject NavigationManager _nav
+@inject TeamsUserCredential teamsUserCredential
+@inject RestaurantService _restaurantService
+@inject OrderService _orderService
+@inject UserService _userService
+
+<PageTitle>Dish and Addons Selector</PageTitle>
+
+@if (isLoading)
+{
+    <p style="text-align: center;">Loading...</p>
+}
+else if (restaurant != null)
+{
+    <FluentHeader>@restaurant.Name</FluentHeader>
+    <p>
+        @restaurant.Description <br />
+        Wybierz jedno danie i dowolne dodatki.
+    </p>
+
+    <h4>Menu</h4>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Nazwa</th>
+                <th>Opis</th>
+                <th>Cena</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var dish in dishes)
+            {
+                <tr @onclick="() => DishToOrder(dish)">
+                    <td>@dish.Name</td>
+                    <td>@dish.Description</td>
+                    <td>@dish.Price zł</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <h4>Dodatki</h4>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Nazwa</th>
+                <th>Cena</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var addon in addons)
+            {
+                <tr @onclick="() => AddonToOrder(addon)">
+                    <td>@addon.Name</td>
+                    <td>@addon.Price zł</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <OrderSummary Order="newOrder" User="currentUser" OnDishCancelled="CancelDish" />
+
+    <FluentButton @onclick="async () => ConfirmOrder(newOrder)">Zatwierdź zamówienie</FluentButton>
+}
+
+<div class="text_center">
+    <FluentButton @onclick="NavigateToOrderList">Lista zamówień</FluentButton>
+    <FluentButton @onclick="NavigateToRestaurantSelector">Powrót</FluentButton>
+</div>
+
+@code {
+    [Parameter]
+    public string RestaurantUuid { get; set; }
+
+    private RestaurantDto restaurant;
+    private OrderDto newOrder;
+    private AppUser currentUser;
+
+    private List<DishDto> dishes = new();
+    private List<AddonDto> addons = new();
+
+    private bool isLoading = true;
+    private bool userExists;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        isLoading = true;
+        restaurant = await _restaurantService.GetRestaurantByUuid(RestaurantUuid);
+        dishes = restaurant.Dishes;
+        addons = restaurant.Addons;
+        isLoading = false;
+
+        newOrder = new OrderDto
+            {
+                RestaurantName = restaurant.Name,
+                RestaurantId = restaurant.Id,
+                OrderAddons = new List<OrderAddonDto>(),
+                Price = 0
+            };
+
+        currentUser = new AppUser();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool render)
+    {
+        await base.OnAfterRenderAsync(render);
+
+        var user = await teamsUserCredential.GetUserInfoAsync();
+
+        if (newOrder != null)
+        {
+            newOrder.UserName = user.DisplayName;
+            currentUser.UserName = user.DisplayName;
+        }
+
+        StateHasChanged();
+    }
+
+    private void DishToOrder(DishDto dish)
+    {
+        if (newOrder.Dish == null)
+        {
+            newOrder.Dish = dish;
+            newOrder.DishId = dish.Id;
+            newOrder.DishName = dish.Name;
+            newOrder.Price += dish.Price;
+        }
+    }
+
+    private void CancelDish()
+    {
+        if (newOrder.Dish != null)
+        {
+            newOrder.Dish = null;
+            newOrder.DishId = null;
+            newOrder.DishName = null;
+            newOrder.Price -= newOrder.Dish.Price;
+        }
+    }
+
+    private async Task AddonToOrder(AddonDto addon)
+    {
+        var existingOrderAddon = newOrder.OrderAddons
+            .FirstOrDefault(oa => oa.AddonId == addon.Id && oa.OrderId == newOrder.Id);
+
+        if (existingOrderAddon == null)
+        {
+            var orderAddon = new OrderAddonDto
+                {
+                    Order = newOrder,
+                    OrderId = newOrder.Id,
+                    Addon = addon,
+                    AddonId = addon.Id,
+                    Quantity = 1
+                };
+
+            newOrder.OrderAddons.Add(orderAddon);
+            newOrder.Price += addon.Price;
+        }
+        else
+        {
+            existingOrderAddon.Quantity += 1;
+            newOrder.Price += addon.Price;
+        }
+    }
+
+    private async Task ConfirmOrder(OrderDto finishedOrder)
+    {
+        if (finishedOrder != null)
+        {
+            var validationResults = new List<ValidationResult>();
+            var validationContext = new ValidationContext(currentUser, null, null);
+            if (!Validator.TryValidateObject(currentUser, validationContext, validationResults, true))
+            {
+                foreach (var validationResult in validationResults)
+                {
+                    Console.WriteLine(validationResult.ErrorMessage);
+                }
+                return;
+            }
+
+            try
+            {
+                await _orderService.NewOrder(finishedOrder);
+                userExists = await _userService.UserExists(currentUser.UserName);
+
+                if (!userExists)
+                {
+                    await _userService.UpdateUser(currentUser);
+                }
+
+                NavigateToOrderList();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+            }
+        }
+    }
+
+    private void NavigateToRestaurantSelector()
+    {
+        _nav.NavigateTo("/restaurants");
+    }
+
+    private void NavigateToOrderList()
+    {
+        _nav.NavigateTo($"/order_list/{RestaurantUuid}");
+    }
+}

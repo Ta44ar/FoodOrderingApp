@@ -1,0 +1,199 @@
+﻿@page "/order_list/{RestaurantUuid}"
+@using FoodOrderingApp.DTOs.Order
+@using FoodOrderingApp.DTOs.Restaurant
+@using FoodOrderingApp.Models
+@using FoodOrderingApp.Models.Webhook_Models
+@inject IOrderRepository _orderRepo
+@inject IRestaurantRepository _restaurantRepo
+@inject RestaurantService _restaurantService
+@inject OrderService _orderService
+@inject NavigationManager _nav
+@inject IHttpClientFactory _clientFactory
+
+<FluentHeader>Lista aktualnych zamówień</FluentHeader>
+
+@if (isLoading)
+{
+    <p style="text-align: center;">Loading...</p>
+}
+else
+{
+    @if (restaurantOrders.Any())
+    {
+        <h2 class="center">@restaurant.Name</h2>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Danie</th>
+                    <th>Dodatki</th>
+                    <th>Cena</th>
+                    <th>Użytkownik</th>
+                    <th>Uwagi do zamówienia</th>
+                    <th>Akcje</th>
+                    <th>Powiadomienie</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var order in restaurantOrders)
+                {
+                    <tr>
+                        <td>@order.Id</td>
+                        <td>@order.DishName</td>
+                        <td>
+                            <ul>
+                                @foreach (var orderAddon in order.OrderAddons)
+                                {
+                                    <li>@orderAddon.Addon.Name - @orderAddon.Addon.Price zł (@orderAddon.Quantity)</li>
+                                }
+                            </ul>
+                        </td>
+                        <td>
+                            @order.Price zł
+                            @if (GetExtraDeliveryCost(restaurant.Id) > 0)
+                            {
+                                <a>(+@GetExtraDeliveryCost(restaurant.Id) zł)</a>
+                            }
+                        </td>
+                        <td>@order.UserName</td>
+                        <td>
+                            @if (order.IsCommentEditing)
+                            {
+                                <input type="text" class="form-control" @bind="@order.Comment" />
+                            }
+                            else
+                            {
+                                @order.Comment
+                            }
+                        </td>
+                        <td>
+                            @if (!order.IsCommentEditing)
+                            {
+                                @if (!string.IsNullOrWhiteSpace(order.Comment))
+                                {
+                                    <FluentButton @onclick="() => EnableCommentEditing(order)">Edytuj komentarz</FluentButton>
+                                    <FluentButton @onclick="() => DeleteComment(order)">Usuń komentarz</FluentButton>
+                                }
+                                else
+                                {
+                                    <FluentButton @onclick="() => EnableCommentEditing(order)">Dodaj komentarz</FluentButton>
+                                }
+                            }
+                            else
+                            {
+                                <FluentButton @onclick="() => SaveComment(order)">Zapisz</FluentButton>
+                            }
+                            <FluentButton @onclick="() => RemoveOrder(order.Id)">Usuń zamówienie</FluentButton>
+                        </td>
+                        <td>
+                            <input type="text" class="form-control" @bind="@order.MessageContent" placeholder="Wpisz treść powiadomienia" />
+                            <FluentButton @onclick="() => SendNotification(order)">Wyślij</FluentButton>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <DeliveryDetails Restaurant="@restaurant"
+                         RestaurantOrders="@restaurantOrders"
+                         DeliveryChargeChanged="(deliveryCharge) => HandleDeliveryChargeChanged(deliveryCharge, restaurant.Id)" />
+
+    }
+    else
+    {
+        <p class="text-center">Brak zamówień dla tej restauracji.</p>
+    }
+}
+
+<div class="text-center">
+    <FluentButton @onclick="NavigateToRestaurantSelector">Nowe zamówienie</FluentButton>
+</div>
+
+@code {
+    [Parameter]
+    public string RestaurantUuid { get; set; }
+
+    private List<OrderDto> restaurantOrders = new();
+    private RestaurantDto restaurant;
+    private Dictionary<int, decimal> restaurantExtraDeliveryCosts = new Dictionary<int, decimal>();
+    private bool isLoading;
+    private decimal extraDeliveryCost = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        restaurant = await _restaurantService.GetRestaurantByUuid(RestaurantUuid);
+        restaurantOrders = await _orderService.GetAllOrdersFromRestaurant(restaurant.Id);
+        isLoading = false;
+    }
+
+    private async Task RemoveOrder(int orderId)
+    {
+        await _orderService.CancelOrder(orderId);
+        restaurantOrders = await _orderService.GetAllOrdersFromRestaurant(restaurant.Id);
+    }
+
+    private void EnableCommentEditing(OrderDto order)
+    {
+        order.IsCommentEditing = true;
+    }
+
+    private async Task SaveComment(OrderDto order)
+    {
+        order.IsCommentEditing = false;
+        await _orderService.UpdateComment(order.Id, order.Comment);
+    }
+
+    private async Task DeleteComment(OrderDto order)
+    {
+        order.IsCommentEditing = false;
+        order.Comment = null;
+        await _orderService.DeleteComment(order.Id);
+    }
+
+    private void HandleDeliveryChargeChanged(decimal deliveryCharge, int restaurantId)
+    {
+        if (restaurantExtraDeliveryCosts.ContainsKey(restaurantId))
+        {
+            restaurantExtraDeliveryCosts[restaurantId] = deliveryCharge;
+        }
+        else
+        {
+            restaurantExtraDeliveryCosts.Add(restaurantId, deliveryCharge);
+        }
+        StateHasChanged();
+    }
+
+    private decimal GetExtraDeliveryCost(int restaurantId)
+    {
+        return restaurantExtraDeliveryCosts.ContainsKey(restaurantId) ? restaurantExtraDeliveryCosts[restaurantId] : 0;
+    }
+
+    private async Task SendNotification(OrderDto order)
+    {
+        var notification = new TeamsNotification
+            {
+                Title = $"Order ID: {order.Id}",
+                Message = $"{order.UserName}! {order.MessageContent}"
+            };
+
+        var client = _clientFactory.CreateClient("WebClient");
+        var response = await client.PostAsJsonAsync("/api/teamswebhook/send-notification", notification);
+
+        if (response.IsSuccessStatusCode)
+        {
+            // Obsługa powodzenia
+            Console.WriteLine("Notification sent successfully.");
+        }
+        else
+        {
+            // Obsługa błędu
+            Console.WriteLine("Failed to send notification.");
+        }
+    }
+
+    private void NavigateToRestaurantSelector()
+    {
+        _nav.NavigateTo("/restaurants");
+    }
+}

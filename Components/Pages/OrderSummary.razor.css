@@ -1,0 +1,12 @@
+﻿.order-container {
+    display: flex;
+    justify-content: space-between;
+}
+
+.order-summary {
+    width: 45%;
+}
+
+.order-inputs {
+    width: 45%;
+}

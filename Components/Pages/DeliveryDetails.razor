@@ -1,0 +1,104 @@
+﻿@using FoodOrderingApp.DTOs.Order
+@using FoodOrderingApp.DTOs.Restaurant
+@using FoodOrderingApp.Models
+@inject IOrderRepository _orderService
+
+<div>
+    <p>Łączna kwota zamówienia z lokalu @Restaurant.Name: @summaryCost zł</p>
+
+    @if (Restaurant.MinSumToDeliver <= summaryCost)
+    {
+        if (Restaurant.FreeDeliverySum > summaryCost)
+        {
+            <div>
+                <p style="color: red">Pozostało @amountMissing zł do darmowej dostawy.</p>
+                @if (isAddingExtraCost)
+                {
+                    <p>Koszt dostawy: @Restaurant.DeliveryCost zł.</p>
+                    <FluentButton @onclick="() => AddExtraDeliveryCost()">Dolicz @deliveryCharge do każdej pozycji.</FluentButton>
+                }
+                else
+                {
+                    <FluentButton @onclick="() => CancelExtraDeliveryCost()">Anuluj doliczenie dostawy.</FluentButton>
+                }
+            </div>
+        }
+        else
+        {
+            <p style="color: forestgreen">Darmowa dostawa.</p>
+        }
+    }
+    else
+    {
+        <p style="color: red">Minimalna kwota zamówienia to @Restaurant.MinSumToDeliver zł.</p>
+    }
+</div>
+<br />
+<div class="text-center">
+    @if (summaryCost >= Restaurant.MinSumToDeliver)
+    {
+        <FluentButton>KOMPLETUJ</FluentButton>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public RestaurantDto Restaurant { get; set; }
+
+    [Parameter]
+    public List<OrderDto> RestaurantOrders { get; set; }
+
+    [Parameter]
+    public EventCallback<decimal> DeliveryChargeChanged { get; set; }
+
+    private decimal summaryCost;
+    private decimal amountMissing;
+    private decimal deliveryCharge;
+    private bool isAddingExtraCost = true;
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        CalculateSummaryCost();
+    }
+
+    private void CalculateSummaryCost()
+    {
+        summaryCost = RestaurantOrders
+            .Sum(order => order.Price);
+
+        amountMissing = Restaurant.FreeDeliverySum - summaryCost;
+
+        deliveryCharge = CalculateDeliveryCharge();
+    }
+
+    private decimal CalculateDeliveryCharge()
+    {
+        var restaurantOrders = RestaurantOrders
+                                   .Where(order => order.RestaurantId == Restaurant.Id)
+                                   .ToList();
+
+        if (amountMissing > 0 && restaurantOrders.Count > 0)
+        {
+            deliveryCharge = Restaurant.DeliveryCost / restaurantOrders.Count;
+        }
+        else
+        {
+            deliveryCharge = 0;
+        }
+
+        return Math.Round(deliveryCharge, 2);
+    }
+
+    private async Task AddExtraDeliveryCost()
+    {
+        isAddingExtraCost = false;
+        await DeliveryChargeChanged.InvokeAsync(deliveryCharge);
+    }
+
+    private async Task CancelExtraDeliveryCost()
+    {
+        isAddingExtraCost = true;
+        await DeliveryChargeChanged.InvokeAsync(0);
+    }
+}
