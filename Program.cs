@@ -33,7 +33,7 @@ builder.Services.AddScoped<UserService>();
 builder.Services.AddControllers();
 builder.Services.AddHttpClient("WebClient", client =>
 {
-    client.BaseAddress = new Uri("https://eclipse822.webhook.office.com/");
+    //client.BaseAddress = new Uri("https://eclipse822.webhook.office.com/");
     client.Timeout = TimeSpan.FromSeconds(600);
 });
 

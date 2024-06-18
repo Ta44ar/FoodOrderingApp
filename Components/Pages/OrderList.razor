@@ -3,11 +3,13 @@
 @using FoodOrderingApp.DTOs.Restaurant
 @using FoodOrderingApp.Models
 @using FoodOrderingApp.Models.Webhook_Models
+@using System.Net.Http.Headers
 @inject IOrderRepository _orderRepo
 @inject IRestaurantRepository _restaurantRepo
 @inject RestaurantService _restaurantService
 @inject OrderService _orderService
 @inject NavigationManager _nav
+@inject TeamsUserCredential _teamsUserCredential
 @inject IHttpClientFactory _clientFactory
 
 <FluentHeader>Lista aktualnych zamówień</FluentHeader>
@@ -118,6 +120,8 @@ else
     private Dictionary<int, decimal> restaurantExtraDeliveryCosts = new Dictionary<int, decimal>();
     private bool isLoading;
     private decimal extraDeliveryCost = 0;
+    private UserInfo currentUser;
+    private string currentUserName;
 
     protected override async Task OnInitializedAsync()
     {
@@ -125,6 +129,7 @@ else
         restaurant = await _restaurantService.GetRestaurantByUuid(RestaurantUuid);
         restaurantOrders = await _orderService.GetAllOrdersFromRestaurant(restaurant.Id);
         isLoading = false;
+        currentUser = await _teamsUserCredential.GetUserInfoAsync();
     }
 
     private async Task RemoveOrder(int orderId)
@@ -171,23 +176,64 @@ else
 
     private async Task SendNotification(OrderDto order)
     {
-        var notification = new TeamsNotification
-            {
-                Title = $"Order ID: {order.Id}",
-                Message = $"{order.UserName}! {order.MessageContent}"
-            };
-
         var client = _clientFactory.CreateClient("WebClient");
-        var response = await client.PostAsJsonAsync("/api/teamswebhook/send-notification", notification);
+        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        currentUserName = currentUser.DisplayName;
+
+        var webhookUrl = "https://eclipse822.webhook.office.com/webhookb2/15a81865-9d35-4543-bddc-cf19926f993c@f211e924-b657-49c8-91af-32ca3d96f706/IncomingWebhook/c9f5edee28524c74b3ad099482709c8c/eef5365d-011e-4892-adc6-e9afc3910450";
+        var appUrl = $"https://localhost:44302/tab";
+
+        string adaptiveCardJson = $@"
+        {{
+          ""type"": ""message"",
+          ""attachments"": [
+            {{
+              ""contentType"": ""application/vnd.microsoft.card.adaptive"",
+              ""content"": {{
+                ""type"": ""AdaptiveCard"",
+                ""body"": [
+                  {{
+                    ""type"": ""TextBlock"",
+                    ""weight"": ""Bolder"",
+                    ""size"": ""Medium"",
+                    ""text"": ""{order.UserName}!""
+                  }},
+                  {{
+                    ""type"": ""TextBlock"",
+                    ""text"": ""{order.MessageContent} (dotyczy zamówienia z {order.RestaurantName})"",
+                    ""wrap"": true
+                  }},
+                  {{
+                    ""type"": ""TextBlock"",
+                    ""weight"": ""Lighter"",
+                    ""text"": ""Wysłano przez {currentUserName}"",
+                    ""wrap"": true,
+                    ""italic"": true
+                  }}
+                ],
+                ""actions"": [
+                  {{
+                    ""type"": ""Action.OpenUrl"",
+                    ""title"": ""Otwórz aplikację"",
+                    ""url"": ""{appUrl}""
+                  }}
+                ],
+                ""$schema"": ""http://adaptivecards.io/schemas/adaptive-card.json"",
+                ""version"": ""1.0""
+              }}
+            }}
+          ]
+        }}";
+
+        var content = new StringContent(adaptiveCardJson, System.Text.Encoding.UTF8, "application/json");
+        var response = await client.PostAsync(webhookUrl, content);
 
         if (response.IsSuccessStatusCode)
         {
-            // Obsługa powodzenia
             Console.WriteLine("Notification sent successfully.");
         }
         else
         {
-            // Obsługa błędu
             Console.WriteLine("Failed to send notification.");
         }
     }
