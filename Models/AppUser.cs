@@ -8,7 +8,7 @@ namespace FoodOrderingApp.Models
         public string UserName { get; set; }
 
         [Required(ErrorMessage = "Numer telefonu jest wymagany")]
-        [Phone(ErrorMessage = "Numer telefonu musi być w formacie telefonu")]
+        [Phone(ErrorMessage = "Numer telefonu musi być w formacie numeru telefonu!")]
         public string PhoneNumber { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Numer konta jest wymagany")]

@@ -23,60 +23,70 @@
 }
 else if (restaurant != null)
 {
-    <FluentHeader>@restaurant.Name</FluentHeader>
-    <p>
+    <FluentHeader style="text-align: center;">@restaurant.Name</FluentHeader>
+    <p class="text-center">
         @restaurant.Description <br />
         Wybierz jedno danie i dowolne dodatki.
     </p>
 
-    <h4>Menu</h4>
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Nazwa</th>
-                <th>Opis</th>
-                <th>Cena</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var dish in dishes)
-            {
-                <tr @onclick="() => DishToOrder(dish)">
-                    <td>@dish.Name</td>
-                    <td>@dish.Description</td>
-                    <td>@dish.Price zł</td>
-                </tr>
-            }
-        </tbody>
-    </table>
+    <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center" Tokens="new StackTokens { ChildrenGap = 20 }">
+        <FluentStackItem Grow="1">
+            <h4>Menu</h4>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Nazwa</th>
+                        <th>Opis</th>
+                        <th>Cena</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var dish in dishes)
+                    {
+                        <tr @onclick="() => DishToOrder(dish)">
+                            <td>@dish.Name</td>
+                            <td>@dish.Description</td>
+                            <td>@dish.Price zł</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </FluentStackItem>
 
-    <h4>Dodatki</h4>
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Nazwa</th>
-                <th>Cena</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var addon in addons)
-            {
-                <tr @onclick="() => AddonToOrder(addon)">
-                    <td>@addon.Name</td>
-                    <td>@addon.Price zł</td>
-                </tr>
-            }
-        </tbody>
-    </table>
+        <FluentStackItem Grow="1">
+            <h4>Dodatki</h4>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Nazwa</th>
+                        <th>Cena</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var addon in addons)
+                    {
+                        <tr @onclick="() => AddonToOrder(addon)">
+                            <td>@addon.Name</td>
+                            <td>@addon.Price zł</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </FluentStackItem>
+    </FluentStack>
 
-    <OrderSummary Order="newOrder" User="currentUser" OnDishCancelled="CancelDish" />
-
-    <FluentButton @onclick="async () => ConfirmOrder(newOrder)">Zatwierdź zamówienie</FluentButton>
+    <div style="text-align: center;">
+        <OrderSummary Order="newOrder" User="currentUser" OnDishCancelled="CancelDish" />
+    </div>
 }
-
-<div class="text_center">
-    <FluentButton @onclick="NavigateToOrderList">Lista zamówień</FluentButton>
-    <FluentButton @onclick="NavigateToRestaurantSelector">Powrót</FluentButton>
+<br />
+<div style="text-align: center;">
+    <FluentButton @onclick="async () => ConfirmOrder(newOrder)">Zatwierdź zamówienie</FluentButton>
+    <br />
+    <div>
+        <FluentButton @onclick="NavigateToOrderList">Lista zamówień</FluentButton>
+        <FluentButton @onclick="NavigateToRestaurantSelector">Powrót</FluentButton>
+    </div>
 </div>
 
 @code {

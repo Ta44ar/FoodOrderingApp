@@ -7,7 +7,7 @@ namespace FoodOrderingApp.DTOs.Order
     {
         public OrderDto()
         {
-            OrderAddons = new List<OrderAddonDto>();
+            OrderAddons = [];
         }
 
         public int Id { get; set; }

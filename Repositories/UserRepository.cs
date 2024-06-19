@@ -40,7 +40,8 @@ namespace FoodOrderingApp.Services
                 {
                     UserName = appUser.UserName,
                     PhoneNumber = appUser.PhoneNumber,
-                    BankAccountNumber = appUser.BankAccountNumber
+                    BankAccountNumber = appUser.BankAccountNumber,
+                    Role = "USER"
                 };
 
                 await _context.Users.AddAsync(user);

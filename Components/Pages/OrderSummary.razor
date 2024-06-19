@@ -3,14 +3,14 @@
 @using FoodOrderingApp.Models
 @using Microsoft.AspNetCore.Components.Forms
 
-<div style="float: left; width: 50%;">
+<div style="text-align: center;">
     @if (Order.Dish != null || Order.OrderAddons.Any())
     {
         <h4>@(!string.IsNullOrEmpty(Order.UserName) ? Order.UserName : "Użytkowniku"), oto twoje zamówienie:</h4>
     }
 
-    <div class="order-container">
-        <div class="order-summary">
+    <div>
+        <div>
             @if (Order.Dish != null)
             {
                 <p>
@@ -35,10 +35,10 @@
     </div>
 </div>
 
-<div style="float: right; width: 50%;">
+<div style="text-align: center;">
     <EditForm EditContext="editContext">
         <DataAnnotationsValidator />
-        <div class="order-inputs">
+        <div>
             <label for="PhoneNumber">Podaj numer telefonu:</label>
             <InputText id="PhoneNumber" @bind-Value="User.PhoneNumber" class="form-control"></InputText>
             <ValidationMessage For="@(() => User.PhoneNumber)" />

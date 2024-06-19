@@ -2,7 +2,6 @@
 @using FoodOrderingApp.DTOs.Order
 @using FoodOrderingApp.DTOs.Restaurant
 @using FoodOrderingApp.Models
-@using FoodOrderingApp.Models.Webhook_Models
 @using System.Net.Http.Headers
 @inject IOrderRepository _orderRepo
 @inject IRestaurantRepository _restaurantRepo
@@ -32,8 +31,9 @@ else
                     <th>Cena</th>
                     <th>Użytkownik</th>
                     <th>Uwagi do zamówienia</th>
-                    <th>Akcje</th>
+                    <th></th>
                     <th>Powiadomienie</th>
+                    <th></th>
                 </tr>
             </thead>
             <tbody>
@@ -69,27 +69,35 @@ else
                             }
                         </td>
                         <td>
-                            @if (!order.IsCommentEditing)
+                            @if (order.UserName.Equals(currentUser.DisplayName))
                             {
-                                @if (!string.IsNullOrWhiteSpace(order.Comment))
+                                @if (!order.IsCommentEditing)
                                 {
-                                    <FluentButton @onclick="() => EnableCommentEditing(order)">Edytuj komentarz</FluentButton>
-                                    <FluentButton @onclick="() => DeleteComment(order)">Usuń komentarz</FluentButton>
+                                    @if (!string.IsNullOrWhiteSpace(order.Comment))
+                                    {
+                                        <FluentButton @onclick="() => EnableCommentEditing(order)">Edytuj uwagę</FluentButton>
+                                        <FluentButton @onclick="() => DeleteComment(order)">Usuń uwagę</FluentButton>
+                                    }
+                                    else
+                                    {
+                                        <FluentButton @onclick="() => EnableCommentEditing(order)">Dodaj uwagę</FluentButton>
+                                    }
                                 }
                                 else
                                 {
-                                    <FluentButton @onclick="() => EnableCommentEditing(order)">Dodaj komentarz</FluentButton>
+                                    <FluentButton @onclick="() => SaveComment(order)">Zapisz</FluentButton>
                                 }
                             }
-                            else
-                            {
-                                <FluentButton @onclick="() => SaveComment(order)">Zapisz</FluentButton>
-                            }
-                            <FluentButton @onclick="() => RemoveOrder(order.Id)">Usuń zamówienie</FluentButton>
                         </td>
                         <td>
                             <input type="text" class="form-control" @bind="@order.MessageContent" placeholder="Wpisz treść powiadomienia" />
                             <FluentButton @onclick="() => SendNotification(order)">Wyślij</FluentButton>
+                        </td>
+                        <td>
+                            @if (order.UserName.Equals(currentUser.DisplayName))
+                            {
+                                <FluentButton @onclick="() => RemoveOrder(order.Id)">X</FluentButton>
+                            }
                         </td>
                     </tr>
                 }
@@ -178,7 +186,6 @@ else
     {
         var client = _clientFactory.CreateClient("WebClient");
         client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-        currentUserName = currentUser.DisplayName;
 
         var webhookUrl = "https://eclipse822.webhook.office.com/webhookb2/15a81865-9d35-4543-bddc-cf19926f993c@f211e924-b657-49c8-91af-32ca3d96f706/IncomingWebhook/c9f5edee28524c74b3ad099482709c8c/eef5365d-011e-4892-adc6-e9afc3910450";
         var appUrl = $"https://localhost:44302/tab";
@@ -206,7 +213,7 @@ else
                   {{
                     ""type"": ""TextBlock"",
                     ""weight"": ""Lighter"",
-                    ""text"": ""Wysłano przez {currentUserName}"",
+                    ""text"": ""Wysłano przez {currentUser.DisplayName}"",
                     ""wrap"": true,
                     ""italic"": true
                   }}
