@@ -6,11 +6,11 @@
 @using System.Net.Http.Headers
 @inject IOrderRepository _orderRepo
 @inject IRestaurantRepository _restaurantRepo
+@inject IHttpClientFactory _clientFactory
 @inject RestaurantService _restaurantService
 @inject OrderService _orderService
 @inject NavigationManager _nav
 @inject TeamsUserCredential _teamsUserCredential
-@inject IHttpClientFactory _clientFactory
 
 <FluentHeader>Lista aktualnych zamówień</FluentHeader>
 
