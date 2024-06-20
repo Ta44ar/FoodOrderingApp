@@ -9,8 +9,5 @@ namespace FoodOrderingApp.Interfaces
     {
         Task<List<RestaurantDto>> GetAllAsync();
         Task<RestaurantDto> GetByUuidAsync(string uuid);
-
-        //Task<List<DishDto>> GetAllDishesAsync(int id);
-        //Task<List<AddonDto>> GetAllAddonsAsync(int id);
     }
 }

@@ -191,6 +191,7 @@ else if (restaurant != null)
         {
             var validationResults = new List<ValidationResult>();
             var validationContext = new ValidationContext(currentUser, null, null);
+
             if (!Validator.TryValidateObject(currentUser, validationContext, validationResults, true))
             {
                 foreach (var validationResult in validationResults)

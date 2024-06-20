@@ -38,6 +38,7 @@ namespace FoodOrderingApp.Services
             {
                 user = new AppUser
                 {
+                    Id = appUser.Id,
                     UserName = appUser.UserName,
                     PhoneNumber = appUser.PhoneNumber,
                     BankAccountNumber = appUser.BankAccountNumber,
@@ -45,10 +46,16 @@ namespace FoodOrderingApp.Services
                 };
 
                 await _context.Users.AddAsync(user);
-                await _context.SaveChangesAsync();
-                return user;
             }
-            return null;
+            else
+            {
+                user.UserName = appUser.UserName;
+                user.PhoneNumber = appUser.PhoneNumber;
+                user.BankAccountNumber = appUser.BankAccountNumber;
+            }
+
+            await _context.SaveChangesAsync();
+            return user;
         }
 
         public Task<bool> UserExists(string username)

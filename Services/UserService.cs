@@ -1,6 +1,7 @@
 ﻿using FoodOrderingApp.DTOs.User;
 using FoodOrderingApp.Interfaces;
 using FoodOrderingApp.Models;
+using Microsoft.Graph.Models;
 
 namespace FoodOrderingApp.Services
 {
@@ -17,24 +18,42 @@ namespace FoodOrderingApp.Services
         {
             var users = await _userRepo.GetAllUsersAsync();
 
-            return users;
+            if (users == null)
+            {
+                Console.WriteLine("User repository returned null getting all o them.");
+                return null;
+            }
+            else
+            {
+                return users;
+            }
         }
 
         public async Task<AppUserDto> GetById(int id)
         {
             var user = await _userRepo.GetByIdAsync(id);
 
-            return user;
+            if (user == null)
+            {
+                Console.WriteLine("User repository returned null getting one by Id.");
+                return null;
+            }
+            else
+            {
+                return user;
+            }
         }
 
         public async Task<AppUser> UpdateUser(AppUser user)
         {
-            if (user == null)
+            try
             {
                 await _userRepo.UpdateUserDetailsAsync(user);
                 return user;
-            } else
+            } 
+            catch (Exception ex)
             {
+                Console.WriteLine(ex.ToString());
                 return null;
             }
         }

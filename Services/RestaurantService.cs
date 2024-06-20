@@ -16,28 +16,31 @@ namespace FoodOrderingApp.Services
         {
             var restaurants = await _restaurantRepo.GetAllAsync();
 
-            return restaurants;
+            if (restaurants == null)
+            {
+                Console.WriteLine("Restaurant repository returned null getting all restaurants.");
+                return null;
+            }
+            else
+            {
+                return restaurants;
+            }
+            
         }
 
         public async Task<RestaurantDto> GetRestaurantByUuid(string restaurantUuid)
         {
             var restaurant = await _restaurantRepo.GetByUuidAsync(restaurantUuid);
 
-            return restaurant;
+            if (restaurant == null)
+            {
+                Console.WriteLine("Restaurant repository returned null getting restaurant.");
+                return null;
+            }
+            else
+            {
+                return restaurant;
+            }
         }
-
-        //public async Task<List<DishDto>> GetRestaurantDishes(int restaurantId)
-        //{
-        //    var restaurantDishes = await _restaurantRepo.GetAllDishesAsync(restaurantId);
-
-        //    return restaurantDishes;
-        //}
-
-        //public async Task<List<AddonDto>> GetRestaurantAddons(int restaurantId)
-        //{
-        //    var restaurantAddons = await _restaurantRepo.GetAllAddonsAsync(restaurantId);
-
-        //    return restaurantAddons;
-        //}
     }
 }
