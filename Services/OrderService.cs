@@ -18,14 +18,30 @@ namespace FoodOrderingApp.Services
 
             var orders = await _orderRepo.GetAllFromRestaurantAsync(restaurantId);
 
-            return orders;
+            if (orders == null)
+            {
+                Console.WriteLine("Order repository returned null getting all orders from specified restaurant.");
+                return null;
+            }
+            else
+            {
+                return orders;
+            }
         }
 
         public async Task<List<OrderDto>> GetAllOrders()
         {
             var orders = await _orderRepo.GetAllAsync();
 
-            return orders;
+            if (orders == null)
+            {
+                Console.WriteLine("Order repository returned null getting all orders.");
+                return null;
+            }
+            else
+            {
+                return orders;
+            }
         }
 
         public async Task<Order> NewOrder(OrderDto orderDto)
